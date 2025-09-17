@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Turmas - IPMIL</title>
+</head>
+<body>
+  <h1>Turmas</h1>
+
+  <form id="formTurma">
+    <input type="text" id="nomeTurma" placeholder="Nome da turma" required>
+    <input type="text" id="instrutorTurma" placeholder="Instrutor" required>
+    <button type="submit">Adicionar Turma</button>
+  </form>
+
+  <ul id="listaTurmas"></ul>
+
+  <script>
+    async function carregarTurmas() {
+      const res = await fetch('/turmas');
+      const turmas = await res.json();
+      const lista = document.getElementById('listaTurmas');
+      lista.innerHTML = '';
+      turmas.forEach(t => {
+        const li = document.createElement('li');
+        li.textContent = `${t.nome} - Instrutor: ${t.instrutor}`;
+        lista.appendChild(li);
+      });
+    }
+
+    document.getElementById('formTurma').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById('nomeTurma').value;
+      const instrutor = document.getElementById('instrutorTurma').value;
+
+      await fetch('/turmas', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ nome, instrutor })
+      });
+
+      document.getElementById('formTurma').reset();
+      carregarTurmas();
+    });
+
+    carregarTurmas();
+  </script>
+</body>
+</html>

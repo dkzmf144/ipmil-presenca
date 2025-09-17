@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Presença IPMIL</title>
+  <script>
+    async function marcarPresenca(aluno_id, presente){
+      const res = await fetch('/presenca/marcar', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({aluno_id, presente})
+      });
+      const data = await res.json();
+      alert(data.success ? "Presença registrada" : "Erro ao registrar");
+    }
+
+    async function gerarRelatorio(){
+      window.open('/presenca/relatorio', '_blank');
+    }
+
+    async function listarPresenca(){
+      const res = await fetch('/presenca');
+      const dados = await res.json();
+      const tabela = document.getElementById("tabela");
+      tabela.innerHTML = "<tr><th>Aluno</th><th>Data</th><th>Presente</th><th>Ação</th></tr>";
+      dados.forEach(p => {
+        tabela.innerHTML += `
+          <tr>
+            <td>${p.nome}</td>
+            <td>${p.data}</td>
+            <td>${p.presente==1?'Sim':'Não'}</td>
+            <td>
+              <button onclick="marcarPresenca(${p.id},1)">Presente</button>
+              <button onclick="marcarPresenca(${p.id},0)">Ausente</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    window.onload = listarPresenca;
+  </script>
+</head>
+<body>
+  <h1>Presença IPMIL</h1>
+  <button onclick="gerarRelatorio()">Gerar PDF de faltas</button>
+  <table border="1" id="tabela"></table>
+</body>
+</html>
