@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Controle de Presença</title>
+  <style>
+    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+    h1, h2 { margin-top: 20px; }
+    form { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; }
+    label { display: block; margin: 8px 0 4px; }
+    input, select { width: 100%; padding: 8px; margin-bottom: 10px; }
+    button { padding: 6px 12px; margin: 2px; cursor: pointer; border: none; border-radius: 4px; }
+    .presente { background: #4caf50; color: white; }
+    .faltou { background: #f44336; color: white; }
+    .excluir { background: #777; color: white; }
+    .reiniciar { background: #2196f3; color: white; margin-bottom: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 30px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+    #tabelas > div { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Controle de Presença</h1>
+
+  <!-- Botão Reiniciar -->
+  <button class="reiniciar" onclick="reiniciar()">Reiniciar Faltantes</button>
+
+  <!-- Formulário de cadastro -->
+    <form onsubmit="cadastrarAluno(event)">
+        <h3>Cadastrar novo aluno</h3>
+        <label>ID:</label>
+        <input type="text" id="id" required>
+      
+        <label>Nome do Aluno:</label>
+        <input type="text" id="nome" required>
+      
+        <label>Nome do Responsável:</label>
+        <input type="text" id="responsavel" required>
+      
+        <label>Telefone (ex: 5511999999999):</label>
+        <input type="text" id="telefone" required>
+      
+        <label>Pelotão:</label>
+        <select id="pelotao" required>
+          <option value="alpha">Alpha</option>
+          <option value="bravo">Bravo</option>
+        </select>
+      
+        <button type="submit">Cadastrar</button>
+      </form>
+      
+
+  <!-- Botões de seleção de pelotão -->
+  <button onclick="mostrar('alpha')">Ver Pelotão Alpha</button>
+  <button onclick="mostrar('bravo')">Ver Pelotão Bravo</button>
+
+  <!-- Listas de presença -->
+  <div id="tabelas">
+    <div id="alpha-div">
+      <h2>Pelotão Alpha</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>Responsável</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="alpha"></tbody>
+      </table>
+    </div>
+
+    <div id="bravo-div">
+      <h2>Pelotão Bravo</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>Responsável</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="bravo"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let alunos = [];
+
+    async function carregarAlunos() {
+      try {
+        let res = await fetch("http://localhost:3000/alunos");
+        alunos = await res.json();
+        atualizarTabelas();
+      } catch (err) {
+        alert("Erro ao carregar alunos: " + err);
+      }
+    }
+
+    function atualizarTabelas() {
+      let alpha = document.getElementById("alpha");
+      let bravo = document.getElementById("bravo");
+      alpha.innerHTML = "";
+      bravo.innerHTML = "";
+
+      alunos.forEach(aluno => {
+        let statusColor = aluno.status === "presente" ? "background: #4caf50; color:white;" :
+                          aluno.status === "faltou" ? "background: #f44336; color:white;" : "";
+
+        let row = `
+          <tr style="${statusColor}">
+            <td>${aluno.id}</td>
+            <td>${aluno.nome}</td>
+            <td>${aluno.telefone}</td>
+            <td>${aluno.responsavel}</td>
+            <td>
+              <button class="presente" onclick="marcar('${aluno.id}','presente')">Presente</button>
+              <button class="faltou" onclick="marcar('${aluno.id}','faltou')">Faltou</button>
+              <button class="excluir" onclick="excluir('${aluno.id}')">Excluir</button>
+            </td>
+          </tr>
+        `;
+        if (aluno.pelotao === "alpha") alpha.innerHTML += row;
+        if (aluno.pelotao === "bravo") bravo.innerHTML += row;
+      });
+    }
+
+    async function marcar(id, status) {
+      try {
+        await fetch("http://localhost:3000/presenca/" + id, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status })
+        });
+        carregarAlunos();
+      } catch (err) {
+        alert("Erro ao atualizar status: " + err);
+      }
+    }
+
+    async function cadastrarAluno(event) {
+      event.preventDefault();
+      let aluno = {
+        id: document.getElementById("id").value,
+        nome: document.getElementById("nome").value,
+        telefone: document.getElementById("telefone").value,
+        pelotao: document.getElementById("pelotao").value,
+        responsavel: document.getElementById("responsavel").value
+      };
+
+      try {
+        let res = await fetch("http://localhost:3000/alunos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(aluno)
+        });
+
+        if (!res.ok) {
+          let text = await res.text();
+          alert("Erro ao cadastrar: " + text);
+          return;
+        }
+
+        alert("Aluno cadastrado com sucesso!");
+        document.getElementById("id").value = "";
+        document.getElementById("nome").value = "";
+        document.getElementById("telefone").value = "";
+        document.getElementById("pelotao").value = "alpha";
+        document.getElementById("responsavel").value = "";
+
+        carregarAlunos();
+      } catch (err) {
+        alert("Erro na conexão com o servidor: " + err);
+      }
+    }
+
+    async function excluir(id) {
+      if (!confirm("Deseja realmente excluir este aluno?")) return;
+
+      try {
+        let res = await fetch("http://localhost:3000/alunos/" + id, { method: "DELETE" });
+        if (!res.ok) {
+          let text = await res.text();
+          alert("Erro ao excluir: " + text);
+          return;
+        }
+        alert("Aluno excluído com sucesso!");
+        carregarAlunos();
+      } catch (err) {
+        alert("Erro na conexão com o servidor: " + err);
+      }
+    }
+
+    async function reiniciar() {
+      if (!confirm("Deseja realmente reiniciar todos os alunos?")) return;
+
+      try {
+        let res = await fetch("http://localhost:3000/reiniciar", { method: "POST" });
+        if (!res.ok) {
+          let text = await res.text();
+          alert("Erro ao reiniciar: " + text);
+          return;
+        }
+        alert("Todos os alunos foram reiniciados!");
+        carregarAlunos();
+      } catch (err) {
+        alert("Erro na conexão com o servidor: " + err);
+      }
+    }
+
+    function mostrar(pelotao) {
+      document.getElementById("alpha-div").style.display = "none";
+      document.getElementById("bravo-div").style.display = "none";
+      document.getElementById(pelotao + "-div").style.display = "block";
+    }
+
+    carregarAlunos();
+  </script>
+</body>
+</html>
